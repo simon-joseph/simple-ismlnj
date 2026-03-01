@@ -23,7 +23,7 @@ ENV PATH $SMLROOT/bin:$PATH
 COPY . $HOME/sml
 WORKDIR $HOME/sml
 
-RUN jupyter kernelspec install kernels/smlnj
+RUN python3 /root/sml/install_kernel.py
 
 WORKDIR $HOME/notebook
 CMD ["jupyter", "notebook", "--no-browser", "--allow-root", "--ip='*'"]
