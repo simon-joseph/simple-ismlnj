@@ -1,5 +1,5 @@
 from ipykernel.kernelbase import Kernel
-from pexpect import replwrap, EOF
+from pexpect import replwrap, EOF, TIMEOUT
 from subprocess import check_output
 
 import re
@@ -51,12 +51,17 @@ class SMLNJKernel(Kernel):
 
         interrupted = False
         try:
-            output = self.smlnjwrapper.run_command(code, timeout=None)
+            if not code.rstrip().endswith(';'):
+                code = code.rstrip() + ';'
+            output = self.smlnjwrapper.run_command(code, timeout=30)
         except KeyboardInterrupt:
             self.smlnjwrapper.child.sendintr()
             interrupted = True
             self.smlnjwrapper._expect_prompt()
             output = self.smlnjwrapper.child.before
+        except TIMEOUT:
+            output = 'Execution timed out after 30 seconds. Check for infinite loops or reduce computation complexity.'
+            self._start_smlnj()
         except EOF:
             output = self.smlnjwrapper.child.before + 'Restarting SML/NJ'
             self._start_smlnj()
