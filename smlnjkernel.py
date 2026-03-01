@@ -6,6 +6,7 @@ import re
 import signal
 
 crlf_pat = re.compile(r'[\r\n]+')
+timeout_pat = re.compile(r'^\s*%timeout\s+(\d+)\s*$', re.MULTILINE)
 
 class SMLNJKernel(Kernel):
     implementation = 'SML/NJ'
@@ -44,6 +45,13 @@ class SMLNJKernel(Kernel):
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
+        # Parse optional %timeout magic (e.g. "%timeout 30")
+        timeout = None
+        m = timeout_pat.search(code)
+        if m:
+            timeout = int(m.group(1))
+            code = timeout_pat.sub('', code)
+
         code = crlf_pat.sub(' ', code.strip())
         if not code:
             return {'status': 'ok', 'execution_count': self.execution_count,
@@ -53,14 +61,14 @@ class SMLNJKernel(Kernel):
         try:
             if not code.rstrip().endswith(';'):
                 code = code.rstrip() + ';'
-            output = self.smlnjwrapper.run_command(code, timeout=30)
+            output = self.smlnjwrapper.run_command(code, timeout=timeout)
         except KeyboardInterrupt:
             self.smlnjwrapper.child.sendintr()
             interrupted = True
             self.smlnjwrapper._expect_prompt()
             output = self.smlnjwrapper.child.before
         except TIMEOUT:
-            output = 'Execution timed out after 30 seconds. Check for infinite loops or reduce computation complexity.'
+            output = 'Execution timed out after %d seconds. Check for infinite loops or reduce computation complexity.' % timeout
             self._start_smlnj()
         except EOF:
             output = self.smlnjwrapper.child.before + 'Restarting SML/NJ'
