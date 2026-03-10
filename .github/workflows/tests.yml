@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install jupyter ipykernel pexpect pytest pytest-mock
+
+      - name: Run unit tests
+        run: pytest tests/test_smlnjkernel.py -v
+
+  regression-tests:
+    name: Regression Tests (Notebooks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Install SML/NJ
+        run: |
+          mkdir -p /opt/smlnj
+          cd /opt/smlnj
+          curl -sL https://smlnj.org/dist/working/110.99.9/config.tgz | tar zxf -
+          ./config/install.sh -default 64
+          echo "/opt/smlnj/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies
+        run: pip install jupyter ipykernel pexpect nbval
+
+      - name: Install SML/NJ Jupyter kernel
+        run: python3 install_kernel.py
+
+      - name: Run regression notebooks
+        run: pytest --nbval-lax tests/regression/ -v
