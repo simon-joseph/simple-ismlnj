@@ -1,0 +1,6 @@
+jupyter
+ipykernel
+pexpect
+pytest
+pytest-mock
+nbval
