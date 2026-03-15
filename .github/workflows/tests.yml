@@ -2,9 +2,8 @@ name: Tests
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   unit-tests:
@@ -27,6 +26,7 @@ jobs:
 
   regression-tests:
     name: Regression Tests (Notebooks)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
