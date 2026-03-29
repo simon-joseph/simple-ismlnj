@@ -5,7 +5,7 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
-from pexpect import EOF, TIMEOUT
+from pexpect import EOF, TIMEOUT, replwrap
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -59,6 +59,15 @@ class TestSMLNJKernelExecute(unittest.TestCase):
         kernel.send_response = MagicMock()
         kernel.smlnjwrapper = MagicMock()
         return kernel
+
+    @patch('smlnjkernel.replwrap.REPLWrapper')
+    def test_start_smlnj_uses_newline_prefixed_prompt(self, mock_replwrapper):
+        instance = mock_replwrapper.return_value
+        kernel = SMLNJKernel.__new__(SMLNJKernel)
+        kernel._start_smlnj()
+
+        self.assertEqual(instance.prompt, '\r\n- ')
+        self.assertEqual(instance.continuation_prompt, replwrap.PEXPECT_CONTINUATION_PROMPT)
 
     def test_execute_adds_semicolon(self):
         kernel = self._make_kernel()
@@ -140,6 +149,17 @@ class TestSMLNJKernelExecute(unittest.TestCase):
         kernel.smlnjwrapper.child.before = 'interrupted output'
         result = kernel.do_execute('1 + 1;', silent=False)
         self.assertEqual(result['status'], 'abort')
+
+    def test_execute_full_stream_example(self):
+        kernel = SMLNJKernel.__new__(SMLNJKernel)
+        kernel.execution_count = 1
+        kernel.iopub_socket = MagicMock()
+        kernel.send_response = MagicMock()
+        kernel._start_smlnj()
+        import os
+        stream_path = os.path.abspath('tests/regression/stream.sml')
+        result = kernel.do_execute(f'use "{stream_path}"; open Stream;', silent=False)
+        self.assertEqual(result['status'], 'ok')
 
 
 class TestSMLNJKernelMetadata(unittest.TestCase):

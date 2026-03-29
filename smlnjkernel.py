@@ -39,7 +39,12 @@ class SMLNJKernel(Kernel):
     def _start_smlnj(self):
         sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
         try:
+            # SML/NJ prompt is '- ' and may appear in expression output (e.g. "val s1 = - : int stream").
+            # Use newline-prefixed prompt to avoid prompt-like output fragments.
+            # Keep continuation prompt at the REPLWrapper default to avoid matching ordinary indented output.
             self.smlnjwrapper = replwrap.REPLWrapper("sml", "- ", None)
+            self.smlnjwrapper.prompt = "\r\n- "
+            self.smlnjwrapper.continuation_prompt = replwrap.PEXPECT_CONTINUATION_PROMPT
         finally:
             signal.signal(signal.SIGINT, sig)
 
